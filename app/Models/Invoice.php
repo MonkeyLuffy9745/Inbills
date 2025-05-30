@@ -33,5 +33,12 @@ class Invoice extends Model
     {
         return $this->hasMany(InvoiceItem::class);
     }
+
+    protected $casts = [
+        'invoice_date' => 'datetime:d/m/Y',
+        'invoice_due_date' => 'datetime:d/m/Y',
+        'payement_date' => 'datetime:d/m/Y'
+    ];
+    
     
 }
