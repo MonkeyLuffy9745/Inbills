@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 use App\Models\Client;
 
@@ -11,7 +12,8 @@ class ClientController extends Controller
 {
     public function index()
     {
-        $clients = Client::all();
+        $user = Auth::user();
+        $clients = $user->clients()->get();
         return $this->responseOk($clients);
         }
 
@@ -19,6 +21,9 @@ class ClientController extends Controller
     public function show($id)
     {
         $client = Client::find($id);
+        if($client->user_id !== Auth::user()->id){
+            return $this->responseError('Unauthorized');
+        }
         return $this->responseOk($client);
     }
     
@@ -29,13 +34,14 @@ class ClientController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:clients',
             'phone' => 'required|string|max:255',
-            'address' => 'required|string|max:255',
-            'user_id' => 'required|exists:users,id',
+            'address' => 'required|string|max:255'
         ]);
 
         if ($validator->fails()) {
             return $this->responseError($validator->errors()->array());
         }
+        
+        $requestData['user_id'] = $request->user()->id;
 
         $client = Client::create($requestData);
         return $this->responseOk($client);
@@ -49,15 +55,19 @@ class ClientController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:clients',
             'phone' => 'required|string|max:255',
-            'address' => 'required|string|max:255',
-            'user_id' => 'required|exists:users,id',
+            'address' => 'required|string|max:255'
         ]);
 
         if ($validator->fails()) {
             return $this->responseError($validator->errors()->array());
         }
 
+        $requestData['user_id'] = $request->user()->id;
+
         $client = Client::find($id);
+        if($client->user_id !== Auth::user()->id){
+            return $this->responseError('Unauthorized');
+        }
         $client->update($requestData);
         return $this->responseOk($client);
     }
@@ -67,6 +77,9 @@ class ClientController extends Controller
     public function destroy($id)
     {
         $client = Client::find($id);
+        if($client->user_id !== Auth::user()->id){
+            return $this->responseError('Unauthorized');
+        }
         $client->delete();
         return $this->responseOk($client);
 

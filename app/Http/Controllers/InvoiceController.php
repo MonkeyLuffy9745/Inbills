@@ -8,19 +8,24 @@ use App\Models\Invoice;
 use App\Models\Client;
 use App\Models\User;
 use App\Models\InvoiceCounter;
+use Illuminate\Support\Facades\Auth;
 
 class InvoiceController extends Controller
 {
     public function index()
     {
-        $invoices = Invoice::all();
+        $user = Auth::user();
+        $invoices = $user->invoices()->with('client', 'invoiceItems')->get();
         return $this->responseOk($invoices);
     }
     
     
     public function show($id)
     {
-        $invoice = Invoice::find($id);
+        $invoice = Invoice::with('invoiceItems')->find($id);
+        if($invoice->user_id !== Auth::user()->id){
+            return $this->responseError('Unauthorized');
+        }
         return $this->responseOk($invoice);
     }
     
@@ -54,14 +59,26 @@ class InvoiceController extends Controller
         'payement_date' => 'required|date_format:d/m/Y',
         'vat' => 'required|numeric',
         'client_id' => 'required|exists:clients,id',
-        'user_id' => 'required|exists:users,id',
+        'currency' => 'required|string|max:3',
+        'notes' => 'nullable|string',
     ]);
 
+    
+    
     if ($validator->fails()) {
         return $this->responseError($validator->errors()->toArray());
     }
+    $userId = $request->user()->id;
+    $invoiceNumber = $this->generateInvoiceNumber($userId);
+    $requestData['user_id'] = $userId;
+    
+    $client = \App\Models\Client::where('id', $requestData['client_id'])
+        ->where('user_id', $userId)
+        ->first();
 
-    $invoiceNumber = $this->generateInvoiceNumber($requestData['user_id']);
+    if (! $client) {
+        return $this->responseError(['client_id' => ['Client invalide ou non autorisé']], 403);
+    }
 
     $requestData['invoice_date'] = \Carbon\Carbon::createFromFormat('d/m/Y', $requestData['invoice_date'])->format('Y-m-d');
     $requestData['invoice_due_date'] = \Carbon\Carbon::createFromFormat('d/m/Y', $requestData['invoice_due_date'])->format('Y-m-d');
@@ -88,19 +105,38 @@ public function update(Request $request, $id)
         'payement_date' => 'required|date_format:d/m/Y',
         'vat' => 'required|numeric',
         'client_id' => 'required|exists:clients,id',
-        'user_id' => 'required|exists:users,id',
+        'currency' => 'required|string|max:3',
+        'notes' => 'nullable|string',
     ]);
 
+    
+    
     if ($validator->fails()) {
         return $this->responseError($validator->errors()->toArray());
+    }
+    
+    $userId = $request->user()->id;
+    $invoiceNumber = $this->generateInvoiceNumber($userId);
+    $requestData['user_id'] = $userId;
+
+    $client = \App\Models\Client::where('id', $requestData['client_id'])
+        ->where('user_id', $userId)
+        ->first();
+
+    if (! $client) {
+        return $this->responseError(['client_id' => ['Client invalide ou non autorisé']], 403);
     }
 
     $requestData['invoice_date'] = \Carbon\Carbon::createFromFormat('d/m/Y', $requestData['invoice_date'])->format('Y-m-d');
     $requestData['invoice_due_date'] = \Carbon\Carbon::createFromFormat('d/m/Y', $requestData['invoice_due_date'])->format('Y-m-d');
     $requestData['payement_date'] = \Carbon\Carbon::createFromFormat('d/m/Y', $requestData['payement_date'])->format('Y-m-d');
 
+    $requestData['invoice_number'] = $invoiceNumber;
 
     $invoice = Invoice::find($id);
+    if($invoice->user_id !== Auth::user()->id){
+        return $this->responseError('Unauthorized');
+    }
     $invoice->update($requestData);
     return $this->responseOk($invoice);
 }
@@ -110,6 +146,9 @@ public function update(Request $request, $id)
     public function destroy($id)
     {
         $invoice = Invoice::find($id);
+        if($invoice->user_id !== Auth::user()->id){
+            return $this->responseError('Unauthorized');
+        }
         $invoice->delete();
         return $this->responseOk($invoice);
     }

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('item_name');
             $table->integer('item_quantity');
             $table->decimal('item_price', 10, 2);
-            $table->string('description');
+            $table->string('description')->nullable();
             $table->decimal('vat', 10, 2);
             $table->timestamps();
         });

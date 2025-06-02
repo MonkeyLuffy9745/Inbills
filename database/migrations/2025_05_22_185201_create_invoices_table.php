@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
-            $table->string('invoice_number');
+            $table->string('invoice_number')->unique();
             $table->date('invoice_date');
             $table->decimal('invoice_amount', 10, 2);
             $table->enum('invoice_status', ['pending', 'paid', 'overdue'])->default('pending');
@@ -21,6 +21,8 @@ return new class extends Migration
             $table->string('payement_method');
             $table->date('payement_date');
             $table->decimal('vat', 10, 2);
+            $table->enum('currency', ['EUR', 'USD', 'GBP'])->default('EUR');
+            $table->text('notes')->nullable();
             $table->foreignId('client_id')->constrained('clients')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->timestamps();
