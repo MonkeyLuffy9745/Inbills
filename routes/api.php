@@ -7,6 +7,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoiceItemController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\MessageController;
 use App\Http\Middleware\AuthToken;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -20,6 +21,8 @@ Route::get('/users/{id}', [UserController::class, 'show']);
 Route::post('/users', [UserController::class, 'store']);
 Route::put('/users/{id}', [UserController::class, 'update']);
 Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+Route::middleware(AuthToken::class)->post('/send-mail', [MessageController::class, 'sendToClient']);
 
 Route::middleware(AuthToken::class)->get('/clients', [ClientController::class, 'index']);
 Route::middleware(AuthToken::class)->get('/clients/{id}', [ClientController::class, 'show']);
